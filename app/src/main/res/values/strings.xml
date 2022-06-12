@@ -1,0 +1,44 @@
+<resources>
+    <string name="app_name">Fruitology</string>
+    <string name="camera">Camera</string>
+    <string name="what_would_you_like_to_choose">What Would you like to Choose?</string>
+    <string-array name="data_name">
+        <item>Apple</item>
+        <item>Banana</item>
+        <item>Orange</item>
+    </string-array>
+    <string-array name="data_description">
+        <item>Apel merupakan jenis buah-buahan, atau buah yang dihasilkan dari pohon buah apel. Buah apel biasanya berwarna merah kulitnya jika masak dan (siap dimakan), namun bisa juga kulitnya berwarna hijau atau kuning. Kulit buahnya agak lembek dan daging buahnya keras. Buah apel memiliki beberapa biji di dalamnya.</item>
+        <item>Pisang adalah nama umum yang diberikan pada tumbuhan terna berukuran besar dengan daun memanjang dan besar yang tumbuh langsung dari bagian tangkai. Batang pisang bersifat lunak karena terbentuk dari lapisan pelepah yang lunak dan panjang. Batang yang agak keras berada di bagian permukaan tanah. Pisang memiliki daun bertangkai yang berpencar dan mudah robek dengan bagian batang yang meruncing. Ukuran daun pada tiap spesies pisang juga berbeda-beda. Tangkai pisang menghasilkan bunga dalam jumlah yang banyak. Bagian bunga pada pisang akan membentuk buah yang disebut sisir. Buah pisang berkelompok dalam satu bunga majemuk dengan ukuran yang makin ke bawah makin mengecil.</item>
+        <item>Jeruk atau limau adalah semua tumbuhan berbunga anggota marga Citrus dari suku Rutaceae (suku jeruk-jerukan). Anggotanya berbentuk pohon dengan buah yang berdaging dengan rasa masam yang segar, meskipun banyak di antara anggotanya yang memiliki rasa manis. Rasa masam berasal dari kandungan asam sitrat yang memang menjadi terkandung pada semua anggotanya.</item>
+    </string-array>
+    <integer-array name="data_photo">
+        <item>@drawable/apple</item>
+        <item>@drawable/banana</item>
+        <item>@drawable/orange</item>
+    </integer-array>
+    <string-array name="data_name2">
+        <item>Agil Almunawar</item>
+        <item>Irfan Fajar Muttaqin</item>
+        <item>Agung Setyo Nugroho</item>
+        <item>Marchelia Naba</item>
+        <item>Abdul Fahmi Aziz</item>
+        <item>Feby Rasyada Zola</item>
+    </string-array>
+    <string-array name="data_description2">
+        <item>Universitas Ibn Khaldun / Android Learning Path</item>
+        <item>Universitas Negeri Semarang / Android Learning Path</item>
+        <item>Universitas Telkom / Machine Learning Path</item>
+        <item>Institut Teknologi Sepuluh Nopember / Machine Learning Path</item>
+        <item>Universitas Ibn Khaldun / Cloud Computing Learning Path</item>
+        <item>Universitas Gadjah Mada / Cloud Computing Learning Path</item>
+    </string-array>
+    <integer-array name="data_photo2">
+        <item>@drawable/team1</item>
+        <item>@drawable/team2</item>
+        <item>@drawable/team3</item>
+        <item>@drawable/team4</item>
+        <item>@drawable/team5</item>
+        <item>@drawable/team6</item>
+    </integer-array>
+</resources>
