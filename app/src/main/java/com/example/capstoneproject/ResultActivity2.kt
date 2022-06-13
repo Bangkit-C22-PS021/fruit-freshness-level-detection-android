@@ -1,0 +1,265 @@
+package com.example.capstoneproject
+
+import android.app.Activity
+import android.content.ContentValues
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.drawable.BitmapDrawable
+import android.net.Uri
+import androidx.appcompat.app.AppCompatActivity
+import android.os.Bundle
+import android.provider.MediaStore
+import android.util.Log
+import android.widget.ImageView
+import android.widget.TextView
+import android.widget.Toast
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
+import com.example.capstoneproject.databinding.ActivityResult2Binding
+import com.example.capstoneproject.ml.AppleDurabilityPrediction
+import com.example.capstoneproject.ml.FruitsFreshAndRottenForClassification
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import org.tensorflow.lite.DataType
+import org.tensorflow.lite.support.image.TensorImage
+import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
+import java.io.IOException
+
+class ResultActivity2 : AppCompatActivity() {
+    private lateinit var binding: ActivityResult2Binding
+    private lateinit var imageView: ImageView
+    private lateinit var button: FloatingActionButton
+    private lateinit var tvOutput: TextView
+    private lateinit var tvOutput2: TextView
+    private val GALLERY_REQUEST_CODE = 123
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivityResult2Binding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        imageView = binding.imageView2
+        button = binding.cameraButton
+        tvOutput = binding.textView2
+        tvOutput2 = binding.textView3
+
+        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_EXTERNAL_STORAGE)
+            == PackageManager.PERMISSION_GRANTED){
+            val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+            intent.type = "image/*"
+            val mimeTypes = arrayOf("image/jpeg","image/png","image/jpg")
+            intent.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes)
+            intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+            onresult.launch(intent)
+        }else {
+            requestPermission.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+
+        button.setOnClickListener {
+            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA)
+                == PackageManager.PERMISSION_GRANTED) {
+                takePicturePreview.launch(null)
+            }
+            else {
+                requestPermission.launch(android.Manifest.permission.CAMERA)
+            }
+        }
+
+        imageView.setOnLongClickListener {
+            requestPermissionLauncher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            return@setOnLongClickListener true
+        }
+
+        binding.bottomNavigation.setOnItemReselectedListener { item ->
+            when (item.itemId){
+                R.id.home ->{
+                    val intent  = Intent(this, MainActivity::class.java)
+                    startActivity(intent)
+                }
+                R.id.history ->{
+                    if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                        == PackageManager.PERMISSION_GRANTED){
+                        val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+                        intent.type = "image/*"
+                        val mimeTypes = arrayOf("image/jpeg","image/png","image/jpg")
+                        intent.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes)
+                        intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        onresult.launch(intent)
+                    }else {
+                        requestPermission.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                    }
+                }
+            }
+        }
+
+    }
+
+    //request camera permission
+    private val requestPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()){granted->
+        if (granted){
+            takePicturePreview.launch(null)
+        }else {
+            Toast.makeText(this, "Permission Denied !! Try again", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    //launch camera and take picture
+    private val takePicturePreview = registerForActivityResult(ActivityResultContracts.TakePicturePreview()){bitmap->
+        if(bitmap != null){
+            imageView.setImageBitmap(bitmap)
+            outputGenerator(bitmap)
+        }
+    }
+
+    //to get image from gallery
+    private val onresult = registerForActivityResult(ActivityResultContracts.StartActivityForResult()){result->
+        Log.i("TAG", "This is the result: ${result.data} ${result.resultCode}")
+        onResultReceived(GALLERY_REQUEST_CODE,result)
+    }
+
+    private fun  onResultReceived(requestCode: Int, result: ActivityResult?){
+        when(requestCode){
+            GALLERY_REQUEST_CODE ->{
+                if (result?.resultCode == Activity.RESULT_OK){
+                    result.data?.data?.let{uri ->
+                        Log.i("TAG", "onResultReceived: $uri")
+                        val bitmap = BitmapFactory.decodeStream(contentResolver.openInputStream(uri))
+                        imageView.setImageBitmap(bitmap)
+                        outputGenerator(bitmap)
+                    }
+                }else {
+                    Log.e("TAG", "onActivityResult: error in selecting image")
+                }
+            }
+        }
+    }
+
+    private fun outputGenerator(bitmap: Bitmap){
+        val model = FruitsFreshAndRottenForClassification.newInstance(this)
+        val imagesize = 128
+        val resized = Bitmap.createScaledBitmap(bitmap, imagesize, imagesize, true)
+
+        val tbuffer = TensorImage(DataType.FLOAT32)
+        tbuffer.load(resized)
+        val byteBuffer = tbuffer.buffer
+
+        val inputFeature0 = TensorBuffer.createFixedSize(intArrayOf(1, imagesize, imagesize, 3), DataType.FLOAT32)
+        inputFeature0.loadBuffer(byteBuffer)
+
+        val outputs = model.process(inputFeature0)
+        val outputFeature0 = outputs.outputFeature0AsTensorBuffer
+
+        val confidences = outputFeature0.floatArray
+        var maxPos = 0
+        var maxConfidence = 0f
+        for (i in confidences.indices) {
+            if (confidences[i] > maxConfidence) {
+                maxConfidence = confidences[i]
+                maxPos = i
+            }
+        }
+
+        val classes = arrayOf("Fresh Orange", "Fresh Banana", "Fresh Apples", "Rotten Apples", "Rotten Banana", "Rotten Orange")
+        tvOutput.text = classes[maxPos]
+
+        val model2 = AppleDurabilityPrediction.newInstance(this)
+        val imagesize2 = 125
+        val resized2 = Bitmap.createScaledBitmap(bitmap, imagesize2, imagesize2, true)
+
+        val tbuffer2 = TensorImage(DataType.FLOAT32)
+        tbuffer2.load(resized2)
+        val byteBuffer2 = tbuffer2.buffer
+
+        val inputFeature02 = TensorBuffer.createFixedSize(intArrayOf(1, imagesize2, imagesize2, 3), DataType.FLOAT32)
+        inputFeature02.loadBuffer(byteBuffer2)
+
+        val outputs2 = model2.process(inputFeature02)
+        val outputFeature02 = outputs2.outputFeature0AsTensorBuffer
+
+        val confidences2 = outputFeature02.floatArray
+        var maxPos2 = 0
+        var maxConfidence2 = 0f
+        for (i in confidences2.indices) {
+            if (confidences2[i] > maxConfidence2) {
+                maxConfidence2 = confidences2[i]
+                maxPos2 = i
+            }
+        }
+
+        val classes2 = arrayOf("Durasi 10 Hari", "Durasi 5 Hari", "Durasi 2 Hari")
+        tvOutput2.text = classes2[maxPos2]
+
+        var s = ""
+        for (i in classes.indices) {
+            s += String.format("%s: %.1f%%\n", classes[i], confidences[i] * 100)
+        }
+
+
+
+        //val max = getMax(outputFeature0.floatArray)
+
+        //tvOutput.text = outputFeature0.floatArray[max].toString()
+
+        model.close()
+
+    }
+
+    private fun getMax (arr:FloatArray) : Int {
+        var ind = 0
+        var min = 0.0f
+
+        for (i in 0..1000){
+            if (arr[i] > min){
+                ind = i
+                min = arr[i]
+            }
+        }
+        return ind
+    }
+
+    // to download image to device
+    private val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()){
+            isGranted: Boolean ->
+        if (isGranted){
+            AlertDialog.Builder(this).setTitle("Download Image?")
+                .setMessage("Do you want to download this image to your device?")
+                .setPositiveButton("Yes"){_, _ ->
+                    val drawable:BitmapDrawable = imageView.drawable as BitmapDrawable
+                    val bitmap = drawable.bitmap
+                    downloadImage(bitmap)
+                }
+                .setNegativeButton("No") {dialog, _ ->
+                    dialog.dismiss()
+                }
+                .show()
+        }else {
+            Toast.makeText(this, "Please allow permission to download image", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    //fun that takes a bitmap and store to user's device
+    private fun downloadImage(mBitmap: Bitmap):Uri? {
+        val contentValues = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME,"Birds_Images"+ System.currentTimeMillis()/1000)
+            put(MediaStore.Images.Media.MIME_TYPE,"image/png")
+        }
+        val uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        if (uri != null){
+            contentResolver.insert(uri, contentValues)?.also {
+                contentResolver.openOutputStream(it).use { outputStream ->
+                    if (!mBitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)){
+                        throw IOException("Couldn't save the bitmap")
+                    }
+                    else{
+                        Toast.makeText(applicationContext, "Image Saved", Toast.LENGTH_LONG).show()
+                    }
+                }
+                return it
+            }
+        }
+        return null
+    }
+}
